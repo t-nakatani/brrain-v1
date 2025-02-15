@@ -2,7 +2,7 @@ import { useState } from 'react'
 import './App.css'
 import ChatMessage from './components/ChatMessage'
 import FollowUpQuestion from './components/FollowUpQuestion'
-import { mockResponse, getFollowUpResponse } from './mocks/api-response'
+import { sendMessage, sendFollowUpResponse } from './api/chat'
 
 function App() {
   const [messages, setMessages] = useState([])
@@ -10,53 +10,77 @@ function App() {
   const [currentResponse, setCurrentResponse] = useState(null)
   const [initialQuestion, setInitialQuestion] = useState('')
   const [answeredFollowUps, setAnsweredFollowUps] = useState(new Set())
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [latentIntent, setLatentIntent] = useState(null)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!userInput.trim()) return
+    if (!userInput.trim() || isLoading) return
 
     const input = userInput
     setInitialQuestion(input)
     setMessages(prev => [...prev, { text: input, isUser: true }])
     setAnsweredFollowUps(new Set())
-    
-    // モックAPIレスポンスを使用
-    setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        { text: mockResponse.response_to_surface_question, isUser: false }
-      ])
-      setCurrentResponse(mockResponse)
-    }, 1000)
-
     setUserInput('')
+    setError(null)
+    setIsLoading(true)
+    
+    try {
+      const response = await sendMessage(input)
+      if (response && response.response_to_surface_question) {
+        setMessages(prev => [
+          ...prev,
+          { text: response.response_to_surface_question, isUser: false }
+        ])
+        setCurrentResponse(response)
+        setLatentIntent(response.latent_intent)
+      } else {
+        throw new Error('不正なレスポンス形式です')
+      }
+    } catch (err) {
+      setError('メッセージの送信に失敗しました。もう一度お試しください。')
+      console.error('Error sending message:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleOptionSelect = (option, followUpId) => {
-    // 選択されたオプションをメッセージとして表示
+  const handleOptionSelect = async (option, followUpId) => {
+    if (isLoading) return
+
     setMessages(prev => [...prev, { 
       text: `選択: ${option.text}`, 
       isUser: true 
     }])
-
-    // 回答済みのフォローアップを記録
     setAnsweredFollowUps(prev => new Set([...prev, followUpId]))
+    setError(null)
+    setIsLoading(true)
 
-    // フォローアップのレスポンスを取得
-    const followUpResponse = getFollowUpResponse(initialQuestion, option)
-    
-    // 新しいレスポンスを表示
-    setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        { text: followUpResponse.response_to_surface_question, isUser: false }
-      ])
-      setCurrentResponse(followUpResponse)
-    }, 1000)
+    try {
+      const response = await sendFollowUpResponse(initialQuestion, option, latentIntent)
+      if (response && response.response_to_surface_question) {
+        setMessages(prev => [
+          ...prev,
+          { text: response.response_to_surface_question, isUser: false }
+        ])
+        setCurrentResponse(response)
+        setLatentIntent(response.latent_intent)
+        if (response.follow_ups && response.follow_ups.length > 0) {
+          setAnsweredFollowUps(new Set())
+        }
+      } else {
+        throw new Error('不正なレスポンス形式です')
+      }
+    } catch (err) {
+      setError('選択の送信に失敗しました。もう一度お試しください。')
+      console.error('Error sending follow-up:', err)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  // 未回答のフォローアップのみを表示
-  const unansweredFollowUps = currentResponse?.follow_ups.filter(
+  const unansweredFollowUps = currentResponse?.follow_ups?.filter(
     followUp => !answeredFollowUps.has(followUp.id)
   ) || []
 
@@ -70,9 +94,19 @@ function App() {
             isUser={message.isUser}
           />
         ))}
+        {isLoading && (
+          <div className="loading-message">
+            <span className="loading-dots">...</span>
+          </div>
+        )}
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
       </div>
       
-      {unansweredFollowUps.map((followUp) => (
+      {!isLoading && unansweredFollowUps.map((followUp) => (
         <FollowUpQuestion
           key={followUp.id}
           followUp={followUp}
@@ -87,8 +121,15 @@ function App() {
           onChange={(e) => setUserInput(e.target.value)}
           placeholder="メッセージを入力..."
           className="message-input"
+          disabled={isLoading}
         />
-        <button type="submit" className="send-button">送信</button>
+        <button 
+          type="submit" 
+          className="send-button"
+          disabled={isLoading}
+        >
+          送信
+        </button>
       </form>
     </div>
   )

@@ -157,3 +157,41 @@
 .send-button:active {
   transform: translateY(0);
 }
+
+.loading-message {
+  display: flex;
+  justify-content: center;
+  padding: 1rem;
+  color: #666;
+}
+
+.loading-dots {
+  animation: loading 1.4s infinite;
+}
+
+@keyframes loading {
+  0%, 20% {
+    content: ".";
+  }
+  40% {
+    content: "..";
+  }
+  60%, 100% {
+    content: "...";
+  }
+}
+
+.error-message {
+  color: #e53e3e;
+  padding: 1rem;
+  margin: 1rem 0;
+  background-color: #fff5f5;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.input-form input:disabled,
+.input-form button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
