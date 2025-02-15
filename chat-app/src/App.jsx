@@ -2,18 +2,21 @@ import { useState, useEffect } from 'react'
 import './App.css'
 import ChatMessage from './components/ChatMessage'
 import FollowUpQuestion from './components/FollowUpQuestion'
-import { mockResponse } from './mocks/api-response'
+import { mockResponse, getFollowUpResponse } from './mocks/api-response'
 
 function App() {
   const [messages, setMessages] = useState([])
   const [userInput, setUserInput] = useState('')
+  const [currentResponse, setCurrentResponse] = useState(null)
+  const [initialQuestion, setInitialQuestion] = useState('')
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!userInput.trim()) return
 
-    // ユーザーメッセージを追加
-    setMessages(prev => [...prev, { text: userInput, isUser: true }])
+    const input = userInput
+    setInitialQuestion(input)
+    setMessages(prev => [...prev, { text: input, isUser: true }])
     
     // モックAPIレスポンスを使用
     setTimeout(() => {
@@ -21,9 +24,30 @@ function App() {
         ...prev,
         { text: mockResponse.response_to_surface_question, isUser: false }
       ])
+      setCurrentResponse(mockResponse)
     }, 1000)
 
     setUserInput('')
+  }
+
+  const handleOptionSelect = (option) => {
+    // 選択されたオプションをメッセージとして表示
+    setMessages(prev => [...prev, { 
+      text: `選択: ${option.text}`, 
+      isUser: true 
+    }])
+
+    // フォローアップのレスポンスを取得
+    const followUpResponse = getFollowUpResponse(initialQuestion, option)
+    
+    // 新しいレスポンスを表示
+    setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        { text: followUpResponse.response_to_surface_question, isUser: false }
+      ])
+      setCurrentResponse(followUpResponse)
+    }, 1000)
   }
 
   return (
@@ -38,16 +62,11 @@ function App() {
         ))}
       </div>
       
-      {mockResponse.follow_ups.map((followUp, index) => (
+      {currentResponse?.follow_ups.map((followUp, index) => (
         <FollowUpQuestion
           key={index}
           followUp={followUp}
-          onOptionSelect={(option) => {
-            setMessages(prev => [...prev, { 
-              text: `選択: ${option.text}`, 
-              isUser: true 
-            }])
-          }}
+          onOptionSelect={handleOptionSelect}
         />
       ))}
 
