@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './App.css'
 import ChatMessage from './components/ChatMessage'
 import FollowUpQuestion from './components/FollowUpQuestion'
@@ -9,6 +9,7 @@ function App() {
   const [userInput, setUserInput] = useState('')
   const [currentResponse, setCurrentResponse] = useState(null)
   const [initialQuestion, setInitialQuestion] = useState('')
+  const [answeredFollowUps, setAnsweredFollowUps] = useState(new Set())
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -17,6 +18,7 @@ function App() {
     const input = userInput
     setInitialQuestion(input)
     setMessages(prev => [...prev, { text: input, isUser: true }])
+    setAnsweredFollowUps(new Set())
     
     // モックAPIレスポンスを使用
     setTimeout(() => {
@@ -30,12 +32,15 @@ function App() {
     setUserInput('')
   }
 
-  const handleOptionSelect = (option) => {
+  const handleOptionSelect = (option, followUpId) => {
     // 選択されたオプションをメッセージとして表示
     setMessages(prev => [...prev, { 
       text: `選択: ${option.text}`, 
       isUser: true 
     }])
+
+    // 回答済みのフォローアップを記録
+    setAnsweredFollowUps(prev => new Set([...prev, followUpId]))
 
     // フォローアップのレスポンスを取得
     const followUpResponse = getFollowUpResponse(initialQuestion, option)
@@ -50,6 +55,11 @@ function App() {
     }, 1000)
   }
 
+  // 未回答のフォローアップのみを表示
+  const unansweredFollowUps = currentResponse?.follow_ups.filter(
+    followUp => !answeredFollowUps.has(followUp.id)
+  ) || []
+
   return (
     <div className="chat-container">
       <div className="messages">
@@ -62,11 +72,11 @@ function App() {
         ))}
       </div>
       
-      {currentResponse?.follow_ups.map((followUp, index) => (
+      {unansweredFollowUps.map((followUp) => (
         <FollowUpQuestion
-          key={index}
+          key={followUp.id}
           followUp={followUp}
-          onOptionSelect={handleOptionSelect}
+          onOptionSelect={(option) => handleOptionSelect(option, followUp.id)}
         />
       ))}
 

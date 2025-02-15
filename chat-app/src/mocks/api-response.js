@@ -5,6 +5,7 @@ export const mockResponse = {
   latent_intent: "リーズナブルな価格で充実した旅行体験を求めている",
   follow_ups: [
     {
+      id: "travel_style",
       question: "どのような旅行スタイルをお考えですか？",
       options: [
         {
@@ -20,13 +21,35 @@ export const mockResponse = {
           text: "アクティビティ体験"
         }
       ]
+    },
+    {
+      id: "season",
+      question: "どの季節に旅行をお考えですか？",
+      options: [
+        {
+          id: "D",
+          text: "春"
+        },
+        {
+          id: "E",
+          text: "夏"
+        },
+        {
+          id: "F",
+          text: "秋"
+        },
+        {
+          id: "G",
+          text: "冬"
+        }
+      ]
     }
   ]
 }
 
 export const getFollowUpResponse = (originalInput, selectedOption) => ({
   user_input: `${originalInput} → ${selectedOption.text}を選択`,
-  surface_question: "選択された旅行スタイルに基づく具体的な提案を求めている",
+  surface_question: "選択された条件に基づく具体的な提案を求めている",
   response_to_surface_question: 
     selectedOption.id === "A" 
       ? "温泉旅行でしたら、3万円の予算で箱根や熱海への日帰り温泉旅行がおすすめです。温泉と食事付きのプランが多数あります。"
@@ -36,19 +59,20 @@ export const getFollowUpResponse = (originalInput, selectedOption) => ({
   latent_intent: "具体的な旅行プランの提案を求めている",
   follow_ups: [
     {
-      question: "ご希望の旅行時期はありますか？",
+      id: "duration",
+      question: "ご希望の旅行期間はありますか？",
       options: [
         {
-          id: "D",
-          text: "今月中"
+          id: "H",
+          text: "日帰り"
         },
         {
-          id: "E",
-          text: "1-2ヶ月以内"
+          id: "I",
+          text: "1泊2日"
         },
         {
-          id: "F",
-          text: "時期は未定"
+          id: "J",
+          text: "2泊3日"
         }
       ]
     }
